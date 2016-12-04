@@ -1,6 +1,6 @@
 module Rooms where
-import Data.Char (isDigit, isLower)
-import Data.List (sort, group)
+import Data.Char (isDigit, isLower, ord, chr)
+import Data.List (sort, group, isInfixOf)
 
 namehash =
   map snd . take 5 . sort . map (\l -> (- length l, head l)) . group . sort . filter (/= '-')
@@ -20,3 +20,14 @@ parse_prob = map roomsplit . lines
 parse_file = fmap parse_prob . readFile
 
 solve = sum . map room_num . filter is_valid
+
+from_let c = toInteger $ (ord c) - (ord 'a')
+to_let n = chr (fromInteger n + (ord 'a'))
+rotnum d n = (d + n) `mod` 26
+rotlet d = to_let . rotnum d . from_let
+decode1 d '-' = ' '
+decode1 d c = rotlet d c
+
+decode (Room enc num _) = map (decode1 num) enc
+
+hunt substr = map room_num . filter (\r -> isInfixOf substr $ decode r)
