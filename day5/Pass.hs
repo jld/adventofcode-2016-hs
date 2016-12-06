@@ -9,16 +9,23 @@ unstring = B.pack . map (toEnum . fromEnum)
 
 setup = M.update M.init . unstring
 
-mthen b e = if b then e else Nothing
+nybbles [] = []
+nybbles (b:bs) = (b `shiftR` 4):(b .&. 0x0f):(nybbles bs)
 
-zerostart n bs = 
-  loop n (B.unpack bs)
-  where loop 0 (b:_) = Just (shiftR b 4)
-        loop 1 (b:_) = mthen (b .&. 0xf0 == 0) $ Just (b .&. 0x0f)
-        loop n (b:bs) = mthen (b == 0) $ loop (n - 2) bs
+zerotrim 0 xs = Just xs
+zerotrim n (0:xs) = zerotrim (n - 1) xs
+zerotrim _ _ = Nothing
 
-check n = zerostart n . M.finalize
+check n = zerotrim n . nybbles . B.unpack . M.finalize
 generate c = map (M.update c . unstring . show) [0..]
 decode n = catMaybes . map (check n) . generate . setup
+decode1 n = map head . decode n
 
-solve = map (("0123456789abcdef" !!) . fromEnum) . take 8 . decode 5
+tohex = ("0123456789abcdef" !!) . fromEnum
+solve = map tohex . take 8 . decode1 5
+
+demux1 x0 = map tail . filter (\xs -> head xs == x0)
+demux stream = map (flip demux1 stream) [0..]
+
+decode2 n = map (head . head) . demux . decode n
+solve2 = map tohex . take 8 . decode2 5
