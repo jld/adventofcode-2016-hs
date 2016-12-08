@@ -52,3 +52,6 @@ from_ops = foldr (.) id . reverse . map from_op
 pic_of_ops = flip from_ops blank
 solve = litcount . pic_of_ops
 solve_file = fmap solve . parse_file
+
+altsolve = display . pic_of_ops
+altsolve_file = (>>= altsolve) . parse_file
