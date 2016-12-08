@@ -1,4 +1,5 @@
 module Screen where
+import Parse
 
 type Dim = Int
 scrw :: Dim
@@ -42,3 +43,12 @@ display = putStr . unlines . render
 
 litcount :: Pic -> Int
 litcount = length . filter id . concat . renderb
+
+from_op (Rect w h) = rect_over w h
+from_op (RotRow row dx) = rotright_over row dx
+from_op (RotCol col dy) = rotdown_over col dy
+
+from_ops = foldr (.) id . reverse . map from_op
+pic_of_ops = flip from_ops blank
+solve = litcount . pic_of_ops
+solve_file = fmap solve . parse_file
