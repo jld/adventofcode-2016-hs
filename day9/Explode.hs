@@ -25,11 +25,22 @@ markerize ((len, reps), rest) =
 run_marker = markerize . mapFst xthing
 unroll_marker = fmapSnd run_marker . splitParens
 
+data Thing = Literal String
+           | Repeat Integer String
+
 parse_markers s = case unroll_marker s of
-  (lit, Nothing) -> [(1, lit)]
-  (lit, Just (reptd, rest)) -> (1, lit):reptd:(parse_markers rest)
+  (lit, Nothing) -> [Literal lit]
+  (lit, Just (reptd, rest)) ->
+    (Literal lit):(uncurry Repeat reptd):(parse_markers rest)
 
 parse_file = fmap (parse_markers . filter (not . isSpace)) . readFile
 
-solve = sum . map (uncurry (*) . mapSnd genericLength)
+thinglen (Literal s) = genericLength s
+thinglen (Repeat n s) = n * genericLength s
 
+solve = sum . map thinglen
+
+altlen (Literal s) = genericLength s
+altlen (Repeat n s) = n * altsolve (parse_markers s)
+
+altsolve = sum . map altlen
