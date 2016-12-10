@@ -7,7 +7,7 @@ wherefrom = foldr loop M.empty
   where loop (so, si) = M.insertWith (++) si [so]
 
 pairify [a, b] = (a, b)
-pairify l = error ("List " ++ show l ++ "is not a pair.")
+pairify l = error ("List " ++ show l ++ " is not a pair.")
 
 botsrcs m i = pairify $ M.findWithDefault (error "bot not found") (ToBot i) m
 
@@ -25,3 +25,11 @@ find_that_does (a,b) = map fst . filter v_ok . M.assocs
 
 solve = find_that_does (61, 17) . evaluate . wherefrom
 solve_file = fmap solve . parse_file
+
+unitize [a] = a
+unitize l = error ("List " ++ show l ++ " is not length 1.")
+
+outget i = unitize . M.findWithDefault (error "output not found") (Output i)
+altthing m = outget 0 m * outget 1 m * outget 2 m
+altsolve = altthing . evaluate . wherefrom
+altsolve_file = fmap altsolve . parse_file
