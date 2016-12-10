@@ -18,7 +18,7 @@ eval1 msi (BotHi i) = uncurry max $ botsrcs msi i
 
 evaluate :: M.Map Sink [Source] -> M.Map Sink [Int]
 evaluate mss = thing
-  where thing = M.map (fmap (eval1 thing)) mss
+  where thing = M.map (map (eval1 thing)) mss
 
 find_that_does (a,b) = map fst . filter v_ok . M.assocs
   where v_ok (k, v) = v == [a, b] || v == [b, a]
