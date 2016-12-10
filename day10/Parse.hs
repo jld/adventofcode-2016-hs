@@ -6,11 +6,11 @@ import Data.Char
 data Source = Value Int
             | BotLo Int
             | BotHi Int
-            deriving (Eq, Show)
+            deriving (Eq, Ord, Show)
 
 data Sink = Output Int
           | ToBot Int
-          deriving (Eq, Show)
+          deriving (Eq, Ord, Show)
 
 num :: ReadP Int
 num = fmap read $ munch1 isDigit
