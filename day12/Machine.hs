@@ -62,3 +62,6 @@ run start = loop (start, regfile)
         loop (Just cfg, rf) = loop $ step cfg rf
 
 irun = run . tangle
+
+altify main = Just $ CInc (Reg 2) main
+altirun = run . altify . tangle
