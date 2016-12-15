@@ -15,7 +15,6 @@ nybbles (b:bs) = (b `shiftR` 4):(b .&. 0x0f):(nybbles bs)
 
 tohex :: Word8 -> Char
 tohex = tohex' . fromEnum
-tohex' :: Int -> Char
 tohex' n
   | n < 10 = chr (ord '0' + n)
   | n < 16 = chr (ord 'a' + (n - 10))
