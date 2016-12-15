@@ -14,7 +14,7 @@ generate s = map (index_seq s) [0..]
 -- The name "intersect" is already spoken for, so...
 polyrhythm sa sb = Sequence {
   seq_mod = lcm (seq_mod sa) (seq_mod sb),
-  seq_off = head $ filter (in_seq sb) $ genericTake (seq_mod sb) (generate sa)
+  seq_off = head $ filter (in_seq sa) $ genericTake (seq_mod sa) (generate sb)
 }
 
 multirhythm :: [Sequence] -> Sequence
