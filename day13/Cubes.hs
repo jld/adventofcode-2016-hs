@@ -1,6 +1,6 @@
 module Cubes where
 import Data.Bits
-import BFS (Node(..), bfs)
+import BFS
 
 data Cube = Cube Int Int Int
             deriving (Eq, Ord, Show)
@@ -27,7 +27,7 @@ instance Node Cube where
 
 isAt x y (Cube _ x' y') = x == x' && y == y'
 
-distance' x y = fst . head . filter (isAt x y . snd)
+distance' x y = pathLen . head . filter (isAt x y . pathNode)
 distance x y = distance' x y . bfs
 
 start k = Cube k 1 1
