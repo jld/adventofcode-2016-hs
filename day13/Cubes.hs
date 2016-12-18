@@ -32,3 +32,5 @@ distance x y = distance' x y . bfs
 
 start k = Cube k 1 1
 solve x y = distance x y . start
+
+altsolve dlim = length . takeWhile ((<= dlim) . pathLen) . bfs . start
