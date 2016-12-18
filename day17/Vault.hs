@@ -26,9 +26,15 @@ doors' = map (>= 11) . take 4 . nybbles . B.unpack
 doors (Jaunt _ _ k) = doors' $ M.hash k
 ways j = zip [jup j, jdn j, jlf j, jrt j] (doors j)
 
+realAdj = map fst . filter snd . filter (boundary . fst) . ways
+
 instance Node Jaunt where
-  adjacent = map fst . filter snd . filter (boundary . fst) . ways
+  adjacent j
+    | final j   = []
+    | otherwise = realAdj j
 
 final j@(Jaunt x y _) = (x,y) == (3,3)
 
 solveish = head . filter final . map pathNode . bfs . start
+
+altsolve = pathLen . last . filter (final . pathNode) . bfs . start
