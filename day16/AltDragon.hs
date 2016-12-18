@@ -1,11 +1,12 @@
 module AltDragon where
 import Data.Maybe (maybe)
 
--- FIXME: this was meant to not eat ridiculous amounts of memory, by
--- not constructing a list of all the things, but... somehow it eats
--- memory anyway.
+-- Represent the string as a function instead of a list to allow
+-- reversing it without forcing the entire thing to exist in memory.
 data Dragon = Dragon Int (Int -> Char)
 
+-- Use chars instead of bools because I got tired of the conversions.
+-- Doesn't seem to be a significant perf cost in practice.
 cnot '0' = '1'
 cnot '1' = '0'
 cnot c = error ("cnot: bad boolean " ++ show c)
@@ -31,9 +32,16 @@ ccheck '0' '1' = '0'
 ccheck '1' '0' = '0'
 ccheck c d = error ("ccheck: bad booleans " ++ show c ++ " " ++ show d)
 
-check' [] = Just []
-check' [_] = Nothing
-check' (a:b:cs) = ((ccheck a b):) <$> (check' cs)
-check l = maybe l check $ check' l
+-- It's tempting to reuse the list-based `check`, but broken: to
+-- decide if a list is even or odd length you have to force the entire
+-- spine, which means the entire O(n) forest of `ccheck` thunks (or
+-- `==` thunks, in the original version) gets allocated before the
+-- `check` can yield the first list cell.
 
-solve n = check . undrag . dragify n
+check d@(Dragon n f)
+  | n `mod` 2 == 0 =
+      let f' i = ccheck (f (2 * i)) (f (2 * i + 1)) in
+       check $ Dragon (n `div` 2) f'
+  | otherwise = d
+
+solve n = undrag . check . dragify n
