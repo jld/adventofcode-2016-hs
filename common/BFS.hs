@@ -1,6 +1,6 @@
 module BFS (Node(..), Len, Path(..), Search, bfs) where
+import Control.Monad.State.Lazy
 import qualified Data.Set as S
-import Data.Function (fix)
 
 class Ord n => Node n where
   adjacent :: n -> [n]
@@ -10,21 +10,32 @@ data Path n = Path { pathLen :: Len, pathNode :: n }
               deriving Show
 type Search n = [Path n]
 
-adjify :: Node n => Path n -> Search n
-adjify (Path l no) = (Path $ succ l) <$> adjacent no
 
-uniquify :: Ord n => Search n -> Search n
-uniquify = loop S.empty
-  where loop _ [] = []
-        loop seen (p:ps)
-          | S.member (pathNode p) seen  = loop seen ps
-          | otherwise                   = p:(loop (S.insert (pathNode p) seen) ps)
+adjify :: Node n => Search n -> Search n
+adjify = concatMap explode
+explode (Path l no) = (Path $ succ l) <$> adjacent no
 
-bfsify :: Node n => n -> Search n -> Search n
-bfsify n0 = uniquify . ((Path 0 n0):) . concatMap adjify
+uniquify :: Ord n => Search n -> State (S.Set n) (Search n)
+uniquify [] = return []
+uniquify (p:ps) = do
+  let node = pathNode p
+  seen <- get
+  if S.member node seen
+    then uniquify ps
+    else do
+    modify $ S.insert node
+    (p:) <$> uniquify ps
+
+uniqueRun = flip evalState S.empty
+
+iterateM :: Monad m => (a -> m a) -> a -> m [a]
+iterateM f x = f x >>= (fmap (x:) . iterateM f)
+
+frontiers :: Node n => n -> [Search n]
+frontiers n0 = uniqueRun (uniquify [Path 0 n0] >>= iterateM (uniquify . adjify))
 
 bfs :: Node n => n -> Search n
-bfs = fix . bfsify
+bfs = concat . takeWhile ((> 0) . length) . frontiers
 
 data Example = Example Int Int
              deriving (Eq, Ord, Show)
