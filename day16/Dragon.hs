@@ -2,7 +2,11 @@ module Dragon where
 import Data.Bool (bool)
 import Data.Maybe (maybe)
 
-antisense = reverse . map not
+mapnot [] = []
+mapnot (False:l) = True:(mapnot l)
+mapnot (True:l) = False:(mapnot l)
+
+antisense = reverse . mapnot
 dragiter d = d ++ [False] ++ antisense d
 dragon seed = ds
   where ds = seed:(map dragiter ds) 
