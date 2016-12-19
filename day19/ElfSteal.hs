@@ -16,7 +16,9 @@ genSteal vf es =
   in S.insert (elfInc stealer) rest
 
 stealNext = genSteal (const 1)
+stealAcross = genSteal ((`div` 2) . S.size)
 
 winnow st = S.elemAt 0 . head . dropWhile ((> 1) . S.size) . iterate st
 
 solve1 = elfNum . winnow stealNext . elfSetup
+solve2 = elfNum . winnow stealAcross . elfSetup
