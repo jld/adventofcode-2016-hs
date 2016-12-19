@@ -2,6 +2,7 @@ module Parse (Source(..), Sink(..),
               parse_line, parse_prob, parse_file) where
 import Text.ParserCombinators.ReadP
 import Data.Char
+import Parsify
 
 data Source = Value Int
             | BotLo Int
@@ -36,16 +37,6 @@ gives = do
   return [(BotLo so, sil), (BotHi so, sih)]
 
 line = goes +++ gives
-
-parsify p s =
-  case readP_to_S p s of
-    [(v, "")] -> v
-    [(_, junk)] ->
-      error ("Input " ++ show s ++ " had trailing junk " ++ show junk)
-    [] ->
-      error ("Input " ++ show s ++ " had no parse")
-    _ ->
-      error ("Input " ++ show s ++ " was ambiguous which shouldn't happen")
 
 parse_line = parsify line
 parse_prob = concat . map parse_line . lines
