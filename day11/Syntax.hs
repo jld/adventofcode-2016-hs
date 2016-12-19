@@ -11,7 +11,7 @@ elemP = munch1 isLower
 chipP = (Chip <$> elemP) <* string "-compatible microchip"
 genP = (Gen <$> elemP) <* string " generator"
 thingP = chipP +++ genP
-aThingP = string "a " *> thingP
+aThingP = (string "a " +++ string "an ") *> thingP
 
 thing0P = const [] <$> string "nothing relevant"
 thing1P = (:[]) <$> aThingP
