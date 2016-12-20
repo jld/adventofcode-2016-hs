@@ -23,6 +23,12 @@ simplify = rmerge . sort
 solve' = succ . rangeMax . head
 solve = solve' . simplify
 
+rangeLen (Range a b) = succ $ toInteger (b - a)
+numBlocked = sum . map rangeLen
+numAllowed = (0x100000000 -) . numBlocked
+
+altsolve = numAllowed . simplify
+
 parse_range s = Range a b
   where [a,b] = map read $ words $ map tr s
         tr '-' = ' '
