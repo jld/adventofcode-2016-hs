@@ -2,6 +2,7 @@ module Scramble where
 import Control.Monad
 import Data.Maybe
 import Data.List
+import Syntax
 
 rol :: Int -> [a] -> [a]
 rol = (liftM2 . liftM2) (++) drop take
@@ -36,3 +37,14 @@ revBetween = applyBetween reverse
 
 swapAt i j l = a ++ d:c ++ b:e
   where (a, b:c, d:e) = trisplit i j l
+
+
+perform (SwapPos x y) l = swapAt x y l
+perform (SwapLetter x y) l = swapAt (findOrElse x l) (findOrElse y l) l
+perform (RotLeft x) l = rol x l
+perform (RotRight x) l = ror x l
+perform (RotBasedOn x) l = sillyrot (findOrElse x l) l
+perform (RevRange x y) l = revBetween x (succ y) l
+perform (Move x y) l = moveFromTo x y l
+
+solve unscr = foldr perform unscr . reverse
