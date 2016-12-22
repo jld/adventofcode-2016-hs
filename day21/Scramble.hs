@@ -39,12 +39,24 @@ swapAt i j l = a ++ d:c ++ b:e
   where (a, b:c, d:e) = trisplit i j l
 
 
-perform (SwapPos x y) l = swapAt x y l
+perform (SwapPos x y) l    = swapAt x y l
 perform (SwapLetter x y) l = swapAt (findOrElse x l) (findOrElse y l) l
-perform (RotLeft x) l = rol x l
-perform (RotRight x) l = ror x l
-perform (RotBasedOn x) l = sillyrot (findOrElse x l) l
-perform (RevRange x y) l = revBetween x (succ y) l
-perform (Move x y) l = moveFromTo x y l
+perform (RotLeft x) l      = rol x l
+perform (RotRight x) l     = ror x l
+perform (RotBasedOn x) l   = sillyrot (findOrElse x l) l
+perform (RevRange x y) l   = revBetween x (succ y) l
+perform (Move x y) l       = moveFromTo x y l
+
+invPerform (SwapPos x y) l    = [swapAt x y l]
+invPerform (SwapLetter x y) l = [swapAt (findOrElse x l) (findOrElse y l) l]
+invPerform (RotLeft x) l      = [ror x l]
+invPerform (RotRight x) l     = [rol x l]
+invPerform (RotBasedOn x) l   = filter ((== l) . perform (RotBasedOn x)) ls
+  where ls = tail $ zipWith (++) (tails l) (inits l)
+invPerform (RevRange x y) l   = [revBetween x (succ y) l]
+invPerform (Move x y) l       = [moveFromTo y x l]
 
 solve unscr = foldr perform unscr . reverse
+
+unsolve :: String -> [Op] -> [String]
+unsolve = foldr ((=<<) . invPerform) . return
