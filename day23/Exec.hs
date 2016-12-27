@@ -34,6 +34,19 @@ step prog = do
   insn <- VU.indexM prog pc
   applyInsn insn
 
+stepMut prog = do
+  pc <- getPC
+  insn <- VUM.read prog pc
+  applyInsnMut prog insn
+
+applyInsnMut prog (Tgl srel) = do
+  pc <- getPC
+  rel <- applySrc srel
+  lift $ toggleInsn prog (pc + rel)
+  jmpRel 1
+
+applyInsnMut _ insn = applyInsn insn
+
 applyInsn (Inc r) = do
   regMod r (+ 1)
   jmpRel 1
