@@ -1,5 +1,7 @@
+{-# LANGUAGE RankNTypes #-}
 module Exec where
 import Insn
+import Control.Monad.ST
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Data.STRef
@@ -17,6 +19,9 @@ newState = do
   pc <- newSTRef 0
   regs <- VGM.replicate kNumRegs 0
   return $ State pc regs
+
+launch :: (forall s. ReaderT (State s) (ST s) a) -> a
+launch thing = runST $ newState >>= runReaderT thing
 
 -- I feel slightly dirty using the constructor directly like this.
 wranglePC = ReaderT . (. statePC)
