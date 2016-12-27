@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, MultiParamTypeClasses #-}
-module Insn(Insn(..), Src(..), Reg, Imm) where
+module Insn(Insn(..), Src(..), Reg, Imm, toggleInsn) where
 import Data.Bits
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
@@ -116,6 +116,16 @@ decodeInsn w0 w1
         w1f = w1 .&. kF_MASK
         w0i = w0 `shiftR` kF_SHIFT
         w1i = w1 `shiftR` kF_SHIFT
+
+toggleInsn (MV_Insn raw) idx =
+  VGM.modify raw toggleW1 (idx * 2 + 1)
+
+toggleW1 w1 = w1hi .|. toggleOpc w1f
+  where w1f = w1 .&. kF_MASK
+        w1hi = w1 .&. complement kF_MASK
+
+toggleOpc 0 = 1
+toggleOpc _ = 0
 
 newtype instance VU.MVector s Insn = MV_Insn (VU.MVector s Int)
 newtype instance VU.Vector    Insn = V_Insn  (VU.Vector    Int)
