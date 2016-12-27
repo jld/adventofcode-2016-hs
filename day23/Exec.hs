@@ -15,6 +15,11 @@ kNumRegs = 4
 data State s = State { statePC :: STRef s Int,
                        stateRegs :: VU.MVector s Int }
 
+data StepResult = Ok
+                | Halt
+                | BusError
+                deriving (Eq, Show)
+
 newState = do
   pc <- newSTRef 0
   regs <- VGM.replicate kNumRegs 0
@@ -23,26 +28,45 @@ newState = do
 launch :: (forall s. ReaderT (State s) (ST s) a) -> a
 launch thing = runST $ newState >>= runReaderT thing
 
+whileOk mx = do
+  res <- mx
+  case res of
+   Ok -> whileOk mx
+   _  -> return res
+
 -- I feel slightly dirty using the constructor directly like this.
 wranglePC = ReaderT . (. statePC)
 wrangleRegs = ReaderT . (. stateRegs)
 
 getPC = wranglePC readSTRef
-jmpRel dpc = wranglePC $ flip modifySTRef (+ dpc)
+jmpRel dpc = wranglePC (flip modifySTRef (+ dpc)) >> return Ok
+
+getPCGuarded bound = check <$> getPC
+  where check pc
+          | pc >= 0 && pc < bound = Just pc
+          | otherwise             = Nothing
 
 regRead (Reg r) = wrangleRegs (\regs -> VGM.read regs r)
 regWrite (Reg r) v = wrangleRegs (\regs -> VGM.write regs r v)
 regMod (Reg r) f = wrangleRegs (\regs -> VGM.modify regs f r)
 
 step prog = do
-  pc <- getPC
-  insn <- VU.indexM prog pc
-  applyInsn insn
+  maybePC <- getPCGuarded $ VU.length prog
+  case maybePC of
+   Just pc -> do
+     insn <- VU.indexM prog pc
+     applyInsn insn
+   Nothing ->
+     return Halt
 
 stepMut prog = do
-  pc <- getPC
-  insn <- VUM.read prog pc
-  applyInsnMut prog insn
+  maybePC <- getPCGuarded $ VUM.length prog
+  case maybePC of
+   Just pc -> do
+     insn <- VUM.read prog pc
+     applyInsnMut prog insn
+   Nothing ->
+     return Halt
 
 applyInsnMut prog (Tgl srel) = do
   pc <- getPC
@@ -50,7 +74,8 @@ applyInsnMut prog (Tgl srel) = do
   lift $ toggleInsn prog (pc + rel)
   jmpRel 1
 
-applyInsnMut _ insn = applyInsn insn
+applyInsnMut _ insn =
+  applyInsn insn
 
 applyInsn (Inc r) = do
   regMod r (+ 1)
@@ -60,7 +85,8 @@ applyInsn (Dec r) = do
   regMod r (flip (-) 1)
   jmpRel 1
 
-applyInsn (Tgl _) = error "applyInsn: toggle instruction in immutable program mode"
+applyInsn (Tgl _) =
+  return BusError
 
 applyInsn (Cpy src rd) = do
   val <- applySrc src
