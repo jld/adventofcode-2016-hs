@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, MultiParamTypeClasses #-}
-module Insn(Insn(..), Src(..), Reg, Imm, toggleInsn) where
+module Insn(Insn(..), Src(..), Reg(..), Imm(..), toggleInsn) where
 import Data.Bits
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
