@@ -1,5 +1,7 @@
 module Exec where
 import Insn
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
 import Data.STRef
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
@@ -16,39 +18,44 @@ newState = do
   regs <- VGM.replicate kNumRegs 0
   return $ State pc regs
 
-jmpRel s dpc = modifySTRef (statePC s) (+ dpc)
+-- I feel slightly dirty using the constructor directly like this.
+wranglePC = ReaderT . (. statePC)
+wrangleRegs = ReaderT . (. stateRegs)
 
-regRead s (Reg r) = VGM.read (stateRegs s) r
-regWrite s (Reg r) = VGM.write (stateRegs s) r
-regMod s (Reg r) f = VGM.modify (stateRegs s) f r
+getPC = wranglePC readSTRef
+jmpRel dpc = wranglePC $ flip modifySTRef (+ dpc)
 
-step prog s = do
-  pc <- readSTRef $ statePC s
+regRead (Reg r) = wrangleRegs (\regs -> VGM.read regs r)
+regWrite (Reg r) v = wrangleRegs (\regs -> VGM.write regs r v)
+regMod (Reg r) f = wrangleRegs (\regs -> VGM.modify regs f r)
+
+step prog = do
+  pc <- getPC
   insn <- VU.indexM prog pc
-  applyInsn s insn
+  applyInsn insn
 
-applyInsn s (Inc r) = do
-  regMod s r (+ 1)
-  jmpRel s 1
+applyInsn (Inc r) = do
+  regMod r (+ 1)
+  jmpRel 1
 
-applyInsn s (Dec r) = do
-  regMod s r (flip (-) 1)
-  jmpRel s 1
+applyInsn (Dec r) = do
+  regMod r (flip (-) 1)
+  jmpRel 1
 
-applyInsn s (Tgl _) = error "applyInsn: toggle instruction in immutable program mode"
+applyInsn (Tgl _) = error "applyInsn: toggle instruction in immutable program mode"
 
-applyInsn s (Cpy src rd) = do
-  val <- applySrc s src
-  regWrite s rd val
-  jmpRel s 1
+applyInsn (Cpy src rd) = do
+  val <- applySrc src
+  regWrite rd val
+  jmpRel 1
 
-applyInsn s (Jnz scond sdpc) = do
-  cond <- applySrc s scond
+applyInsn (Jnz scond sdpc) = do
+  cond <- applySrc scond
   if cond /= 0 then do
-    dpc <- applySrc s sdpc
-    jmpRel s dpc
+    dpc <- applySrc sdpc
+    jmpRel dpc
   else
-    jmpRel s 1
+    jmpRel 1
 
-applySrc _ (SrcImm (Imm i)) = return i
-applySrc s (SrcReg r) = regRead s r
+applySrc (SrcImm (Imm i)) = return i
+applySrc (SrcReg r) = regRead r
