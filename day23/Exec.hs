@@ -77,6 +77,9 @@ applyInsnMut prog (Tgl srel) = do
 applyInsnMut _ insn =
   applyInsn insn
 
+applyInsn Nop =
+  jmpRel 1
+
 applyInsn (Inc r) = do
   regMod r (+ 1)
   jmpRel 1
