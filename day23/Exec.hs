@@ -51,10 +51,12 @@ wrangleRegs = ReaderT . (. stateRegs)
 getPC = wranglePC readSTRef
 jmpRel dpc = wranglePC (flip modifySTRef (+ dpc)) >> return Ok
 
-getPCGuarded bound = check <$> getPC
-  where check pc
-          | pc >= 0 && pc < bound = Just pc
-          | otherwise             = Nothing
+checkPC progSize allegedPC
+  | allegedPC >= 0
+  , allegedPC < progSize = Just allegedPC
+  | otherwise            = Nothing
+
+getPCGuarded progSize = checkPC progSize <$> getPC
 
 regRead (Reg r) = wrangleRegs (\regs -> VGM.read regs r)
 regWrite (Reg r) v = wrangleRegs (\regs -> VGM.write regs r v)
@@ -81,7 +83,9 @@ stepMut prog = do
 applyInsnMut prog (Tgl srel) = do
   pc <- getPC
   rel <- applySrc srel
-  lift $ toggleInsn prog (pc + rel)
+  case checkPC (VUM.length prog) (pc + rel) of
+   Just dst -> lift $ toggleInsn prog dst
+   Nothing  -> return ()
   jmpRel 1
 
 applyInsnMut _ insn =
