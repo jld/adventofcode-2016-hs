@@ -15,6 +15,16 @@ kNumRegs = 4
 data State s = State { statePC :: STRef s Int,
                        stateRegs :: VU.MVector s Int }
 
+data Snapshot = Snapshot { snapPC :: Int,
+                           snapRegs :: VU.Vector Int }
+                deriving (Eq, Ord, Show)
+
+snapshot = do
+  State mpc mregs <- ask
+  pc <- lift $ readSTRef mpc
+  regs <- lift $ VG.freeze mregs
+  return $ Snapshot pc regs
+
 data StepResult = Ok
                 | Halt
                 | BusError
