@@ -3,6 +3,7 @@ import BFS
 import Control.Applicative
 import Control.Monad
 import Data.Maybe
+import Data.List
 import Data.Vector.Generic (fromList, (!?))
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
@@ -69,7 +70,29 @@ pointsFrom tb xy = do
   pt <- maybeToList $ pointGet $ tubeGet tb $ pathNode path
   return $ Route pt $ pathLen path
 
+type TubeMap = [Route (Int, Int)]
+
+tubeMap :: Tubes -> TubeMap
 tubeMap tb = do
   (pfrom, xy) <- zip [(0 :: Int)..] $ findPoints tb
   Route pto len <- pointsFrom tb xy
   return $ Route (pfrom, pto) len
+
+-- ugh hax
+tmapSize :: TubeMap -> Int
+tmapSize = succ . maximum . map (fst . routeTag)
+
+simpleTSP :: TubeMap -> [Route [Int]]
+simpleTSP tmp = tsp [0] where
+  target = tmapSize tmp
+  tsp trail
+    | length trail >= target = return $ Route [] 0
+    | otherwise = do
+        let here = head trail
+        Route (pfrom, pto) len <- tmp
+        guard $ pfrom == here
+        guard $ not $ elem pto trail
+        Route restPath restLen <- tsp (pto:trail)
+        return $ Route (here:restPath) (len + restLen)
+
+simpleShortest = head . sortOn routeLen . simpleTSP
