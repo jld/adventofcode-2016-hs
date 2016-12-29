@@ -10,6 +10,8 @@ data Path n = Path { pathLen :: Len, pathNode :: n }
               deriving Show
 type Search n = [Path n]
 
+instance Functor Path where
+  fmap f (Path l n) = Path l (f n)
 
 adjify :: Node n => Search n -> Search n
 adjify = concatMap explode
