@@ -95,4 +95,4 @@ simpleTSP tmp = tsp [0] where
         Route restPath restLen <- tsp (pto:trail)
         return $ Route (here:restPath) (len + restLen)
 
-simpleShortest = head . sortOn routeLen . simpleTSP
+shortest = head . sortOn routeLen
