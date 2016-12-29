@@ -86,13 +86,21 @@ simpleTSP :: TubeMap -> [Route [Int]]
 simpleTSP tmp = tsp [0] where
   target = tmapSize tmp
   tsp trail
-    | length trail >= target = return $ Route [] 0
+    | length trail >= target = return $ Route [here] 0
     | otherwise = do
-        let here = head trail
         Route (pfrom, pto) len <- tmp
         guard $ pfrom == here
         guard $ not $ elem pto trail
         Route restPath restLen <- tsp (pto:trail)
         return $ Route (here:restPath) (len + restLen)
+    where here = head trail
+
+simpleHamil tmp = do
+  Route path len <- simpleTSP tmp
+  let here = last path
+  Route (lfrom, lto) llen <- tmp
+  guard $ lfrom == here
+  guard $ lto == 0
+  return $ Route (path ++ [0]) (len + llen)
 
 shortest = head . sortOn routeLen
