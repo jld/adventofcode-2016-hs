@@ -28,6 +28,7 @@ snapshot = do
 data StepResult = Ok
                 | Halt
                 | BusError
+                | Output Int
                 deriving (Eq, Show)
 
 newState = do
@@ -104,6 +105,11 @@ applyInsn (Dec r) = do
 
 applyInsn (Tgl _) =
   return BusError
+
+applyInsn (Out src) = do
+  val <- applySrc src
+  Ok <- jmpRel 1
+  return $ Output val
 
 applyInsn (Cpy src rd) = do
   val <- applySrc src

@@ -8,6 +8,7 @@ import qualified Data.Vector.Unboxed as VU
 data Insn = Inc Reg
           | Dec Reg
           | Tgl Src
+          | Out Src
           | Cpy Src Reg
           | Jnz Src Src
           | Nop
@@ -42,6 +43,7 @@ k0F_REG1 = 4
 k1U_INC = 0
 k1U_DEC = 1
 k1U_TGL = 2
+k1U_OUT = 3
 k1B_CPY = 0
 k1B_JNZ = 1
 
@@ -59,6 +61,12 @@ encodeInsn (Tgl (SrcImm (Imm i))) =
 encodeInsn (Tgl (SrcReg (Reg r))) =
   (k0F_UNARY .|. k0F_REG0 .|. r `shiftL` kF_SHIFT,
    k1U_TGL)
+encodeInsn (Out (SrcImm (Imm i))) =
+  (k0F_UNARY .|. k0F_IMM0 .|. i `shiftL` kF_SHIFT,
+   k1U_OUT)
+encodeInsn (Out (SrcReg (Reg r))) =
+  (k0F_UNARY .|. k0F_REG0 .|. r `shiftL` kF_SHIFT,
+   k1U_OUT)
 
 encodeInsn (Cpy (SrcImm (Imm isrc)) (Reg rdst)) =
   (k0F_BINARY .|. k0F_IMM0 .|. k0F_REG1 .|. isrc `shiftL` kF_SHIFT,
@@ -92,6 +100,12 @@ decodeInsn w0 w1
   | w0f == k0F_UNARY .|. k0F_REG0
   , w1f == k1U_TGL
   = Tgl (SrcReg (Reg w0i))
+  | w0f == k0F_UNARY .|. k0F_IMM0
+  , w1f == k1U_OUT
+  = Out (SrcImm (Imm w0i))
+  | w0f == k0F_UNARY .|. k0F_REG0
+  , w1f == k1U_OUT
+  = Out (SrcReg (Reg w0i))
   | w0f == k0F_BINARY .|. k0F_IMM0 .|. k0F_REG1
   , w1f == k1B_CPY
   = Cpy (SrcImm (Imm w0i)) (Reg w1i)

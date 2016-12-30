@@ -16,6 +16,7 @@ insn_of_words ["cpy", src, dst] = Cpy (parse_src src) (parse_reg dst)
 insn_of_words ["inc", reg] = Inc (parse_reg reg)
 insn_of_words ["dec", reg] = Dec (parse_reg reg)
 insn_of_words ["tgl", rel] = Tgl (parse_src rel)
+insn_of_words ["out", rel] = Out (parse_src rel)
 insn_of_words ["jnz", src, rel] = Jnz (parse_src src) (parse_src rel)
 insn_of_words l = error ("Unrecognized insn " ++ show (unwords l))
 
