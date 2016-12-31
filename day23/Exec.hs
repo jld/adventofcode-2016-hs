@@ -12,6 +12,8 @@ import qualified Data.Vector.Unboxed.Mutable as VUM
 
 kNumRegs = 4
 
+type ExecM s = ReaderT (State s) (ST s)
+
 data State s = State { statePC :: STRef s Int,
                        stateRegs :: VU.MVector s Int }
 
@@ -19,12 +21,14 @@ data Snapshot = Snapshot { snapPC :: Int,
                            snapRegs :: VU.Vector Int }
                 deriving (Eq, Ord, Show)
 
+snapshot :: ExecM s Snapshot
 snapshot = do
   State mpc mregs <- ask
   pc <- lift $ readSTRef mpc
   regs <- lift $ VG.freeze mregs
   return $ Snapshot pc regs
 
+type ExecRes s = ExecM s StepResult
 data StepResult = Ok
                 | Halt
                 | BusError
@@ -36,7 +40,7 @@ newState = do
   regs <- VGM.replicate kNumRegs 0
   return $ State pc regs
 
-launch :: (forall s. ReaderT (State s) (ST s) a) -> a
+launch :: (forall s. ExecM s a) -> a
 launch thing = runST $ newState >>= runReaderT thing
 
 whileOk mx = do
@@ -49,7 +53,10 @@ whileOk mx = do
 wranglePC = ReaderT . (. statePC)
 wrangleRegs = ReaderT . (. stateRegs)
 
+getPC :: ExecM s Int
 getPC = wranglePC readSTRef
+
+jmpRel :: Int -> ExecRes s
 jmpRel dpc = wranglePC (flip modifySTRef (+ dpc)) >> return Ok
 
 checkPC progSize allegedPC
@@ -59,10 +66,16 @@ checkPC progSize allegedPC
 
 getPCGuarded progSize = checkPC progSize <$> getPC
 
+regRead :: Reg -> ExecM s Int
 regRead (Reg r) = wrangleRegs (\regs -> VGM.read regs r)
+
+regWrite :: Reg -> Int -> ExecM s ()
 regWrite (Reg r) v = wrangleRegs (\regs -> VGM.write regs r v)
+
+regMod :: Reg -> (Int -> Int) -> ExecM s ()
 regMod (Reg r) f = wrangleRegs (\regs -> VGM.modify regs f r)
 
+step :: Prog -> ExecRes s
 step prog = do
   maybePC <- getPCGuarded $ VU.length prog
   case maybePC of
@@ -72,6 +85,7 @@ step prog = do
    Nothing ->
      return Halt
 
+stepMut :: MProg s -> ExecRes s
 stepMut prog = do
   maybePC <- getPCGuarded $ VUM.length prog
   case maybePC of
@@ -80,6 +94,9 @@ stepMut prog = do
      applyInsnMut prog insn
    Nothing ->
      return Halt
+
+
+applyInsnMut :: MProg s -> Insn -> ExecRes s
 
 applyInsnMut prog (Tgl srel) = do
   pc <- getPC
@@ -91,6 +108,9 @@ applyInsnMut prog (Tgl srel) = do
 
 applyInsnMut _ insn =
   applyInsn insn
+
+
+applyInsn :: Insn -> ExecRes s
 
 applyInsn Nop =
   jmpRel 1
@@ -124,5 +144,6 @@ applyInsn (Jnz scond sdpc) = do
   else
     jmpRel 1
 
+applySrc :: Src -> ExecM s Int
 applySrc (SrcImm (Imm i)) = return i
 applySrc (SrcReg r) = regRead r

@@ -3,63 +3,55 @@ import Insn
 import Exec
 import Parse
 import Control.Monad
-import Control.Monad.Writer.Strict
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.RWS.Strict
 import qualified Data.Map.Strict as M
 import Data.Maybe
 import Data.STRef
 
-emit :: Monad m => a -> WriterT [a] m ()
-emit = tell . pure
+type BeepM s = RWST Prog [Int] History (ExecM s)
+type History = M.Map Snapshot Int
+newHistory = M.empty :: History
 
--- This was going to be a starting point, maybe, but it doesn't work
--- because of strictness.
-{-
-filterOut (Output o) = emit o >> return Ok
-filterOut other      = return other
+theProg :: BeepM s Prog
+theProg = ask
 
-stepOut prog = lift (step prog) >>= filterOut
+stateLookup :: Snapshot -> BeepM s (Maybe Int)
+stateLookup snap = M.lookup snap <$> get
 
-experiment a0 prog =
-  launch $ do
-    regWrite (Reg 0) a0
-    execWriterT $ whileOk $ stepOut prog
--}
+stateAdd :: Snapshot -> BeepM s ()
+stateAdd snap = modify (\m -> M.insert snap (M.size m) m)
 
-newtype StateLog s = StateLog (STRef s (M.Map Snapshot Int))
-newLog = StateLog <$> newSTRef M.empty
-
-stateLookup (StateLog lr) snap = M.lookup snap <$> readSTRef lr 
-stateAdd (StateLog lr) snap = modifySTRef lr (\m -> M.insert snap (M.size m) m)
-
-handleOut _   Ok =
-  return Nothing
-
-handleOut log (Output o) = do
+handleOut :: StepResult -> BeepM s (Maybe Int)
+handleOut (Output o) = do
   snap <- lift snapshot
-  maybeFound <- lift $ lift $ stateLookup log snap
+  maybeFound <- stateLookup snap
   when (isNothing maybeFound) $ do
-    lift $ lift $ stateAdd log snap
-    emit o
+    stateAdd snap
+    tell [o]
   return maybeFound
 
-handleOut _   other = do
+handleOut Ok =
+  return Nothing
+
+handleOut failure = do
   pc <- lift getPC
-  error ("Bunny fault " ++ show other ++ " at PC " ++ show pc)
+  -- TODO, maybe: deal with halting programs.
+  error ("Bunny fault: " ++ show failure ++ " at PC " ++ show pc)
 
--- Another ReaderT for these args I keep threading around might be
--- nice, but the lift stacks are getting irritating as it is.  Maybe
--- there's a way to factor them back into elegance, but, meh.
-stepOut prog log = (lift $ whileOk $ step prog) >>= handleOut log
+stepOut :: BeepM s (Maybe Int)
+stepOut = handleOut =<< (lift . whileOk . step) =<< theProg
 
-whileNothing mx = mx >>= f
-  where f Nothing = whileNothing mx
-        f (Just x) = return x
+whileNothing mx = mx >>= doneYet
+  where doneYet Nothing = whileNothing mx
+        doneYet (Just x) = return x
 
-runOut prog = (lift $ lift $ newLog) >>= (whileNothing . stepOut prog)
+runOut :: BeepM s Int
+runOut = whileNothing stepOut
 
 experiment prog a0 = launch $ do
   regWrite (Reg 0) a0
-  runWriterT $ runOut prog
+  evalRWST runOut prog newHistory
 
 isClock ostinato (backJump, stuff) = prefixCheck && periodCheck
   where prefixCheck = all id $ zipWith (==) stuff $ cycle ostinato

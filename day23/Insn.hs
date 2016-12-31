@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, MultiParamTypeClasses #-}
-module Insn(Insn(..), Src(..), Reg(..), Imm(..), toggleInsn) where
+module Insn(Insn(..), Src(..), Reg(..), Imm(..), toggleInsn, Prog, MProg) where
 import Data.Bits
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
@@ -13,6 +13,9 @@ data Insn = Inc Reg
           | Jnz Src Src
           | Nop
           deriving (Eq, Show)
+
+type Prog    = VU.Vector Insn
+type MProg s = VU.MVector s Insn
 
 data Src = SrcImm Imm
          | SrcReg Reg
